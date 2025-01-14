@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Notifications</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f6f8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .notification-panel {
+            width: 600px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .notification-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .notification-header a {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .notification-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .notification-item:hover {
+            background-color: #f1f1f1;
+        }
+
+        .notification-item img,
+        .notification-item .placeholder-image {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .notification-item .placeholder-image {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #007bff;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .notification-item .details {
+            flex-grow: 1;
+        }
+
+        .notification-item .details p {
+            margin: 0;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .notification-item .details .time {
+            font-size: 12px;
+            color: #888;
+            margin-top: 3px;
+        }
+
+        .notification-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #27ae60;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+        }
+
+        .notification-footer {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .notification-footer a {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 14px;
+        }
+
+        #message {
+            margin: 10px auto;
+            display: block;
+            width: 90%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        button {
+            display: block;
+            margin: 10px auto;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="notification-panel">
+    <div class="notification-header">
+        <h3>Notifications</h3>
+        <a onclick="markAllAsRead()">Mark all as read</a>
+    </div>
+    <div id="notifications">
+        <!-- Dynamic notifications will appear here -->
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+
+    function connect() {
+        const socket = new SockJS('http://localhost:8080/ws');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function (frame) {
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/notifications', function (message) {
+                showNotification(message.body);
+            });
+        }, function (error) {
+            console.error('WebSocket connection error: ' + error);
+        });
+    }
+
+    function showNotification(message) {
+        const notifications = document.getElementById('notifications');
+
+        const notificationItem = document.createElement('div');
+        notificationItem.className = 'notification-item';
+
+        // Add random user image or placeholder
+        let img;
+        if (Math.random() > 0.5) {
+            img = document.createElement('img');
+            img.src = `https://i.pravatar.cc/50?u=${Math.random()}`;
+            img.alt = 'User';
+        } else {
+            img = document.createElement('div');
+            img.className = 'placeholder-image';
+            img.textContent = message[0]?.toUpperCase() || 'N';
+        }
+
+        const details = document.createElement('div');
+        details.className = 'details';
+
+        const text = document.createElement('p');
+        text.textContent = message;
+
+        const time = document.createElement('span');
+        time.className = 'time';
+        time.textContent = 'Just now';
+
+        const dot = document.createElement('div');
+        dot.className = 'notification-dot';
+
+        details.appendChild(text);
+        details.appendChild(time);
+
+        notificationItem.appendChild(img);
+        notificationItem.appendChild(details);
+        notificationItem.appendChild(dot);
+
+        notifications.insertBefore(notificationItem, notifications.firstChild);
+    }
+
+    function markAllAsRead() {
+        const dots = document.querySelectorAll('.notification-dot');
+        dots.forEach(dot => dot.remove());
+    }
+
+    connect();
+</script>
+</body>
+</html>
